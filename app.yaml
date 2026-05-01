@@ -1,0 +1,7 @@
+name: pjdfstest
+app_id: da_RbxI9tgU4Drv
+owner: artemyarulin
+package: .
+cli_args:
+- '8080'
+kind: wasmer.io/App.v0

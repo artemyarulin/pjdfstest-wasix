@@ -1,0 +1,29 @@
+[package]
+name = "artemyarulin/pjdfstest"
+version = "0.1.0"
+description = "pjdfstest runner UI"
+readme = "README.md"
+
+[[module]]
+name = "http"
+source = "target/wasm32-wasmer-wasi/release/http.rustc.wasm"
+abi = "wasi"
+
+[module.interfaces]
+wasi = "0.1.0-unstable"
+
+[[module]]
+name = "pjdfstest"
+source = "target/wasm32-wasmer-wasi/release/pjdfstest.rustc.wasm"
+abi = "wasi"
+
+[module.interfaces]
+wasi = "0.1.0-unstable"
+
+[[command]]
+name = "http"
+module = "http"
+runner = "wasi"
+
+[fs]
+"/app" = "package-assets/app"

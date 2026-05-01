@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pjdfstest</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px; color: #172033; }
+    button { padding: 8px 12px; margin-right: 8px; }
+    header { align-items: center; display: flex; gap: 16px; justify-content: space-between; }
+    h1 { margin: 0; }
+    #error { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 8px; color: #991b1b; display: none; padding: 8px 12px; }
+    table { border-collapse: collapse; margin-top: 16px; width: 100%; }
+    th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+    pre { background: #f6f8fa; padding: 12px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>pjdfstest</h1>
+    <div id="error"></div>
+  </header>
+  <button id="run">Run test</button>
+  <span id="status">Idle</span>
+  <table>
+    <thead><tr><th>Group</th><th>Tests</th><th>Cases</th><th>Passed</th><th>Failed</th></tr></thead>
+    <tbody id="groups"></tbody>
+  </table>
+  <pre id="log"></pre>
+  <script>
+    async function loadReport() {
+      const report = await fetch('/report').then(r => r.json());
+      const rows = (report.groups || []).map(group => `
+        <tr>
+          <td>${group.name}</td>
+          <td>${group.summary.tests}</td>
+          <td>${group.summary.cases}</td>
+          <td>${group.summary.passed}</td>
+          <td>${group.summary.failed}</td>
+        </tr>
+      `).join('');
+      document.getElementById('groups').innerHTML = rows || '<tr><td colspan="5">No report.json yet</td></tr>';
+    }
+
+    document.getElementById('run').onclick = () => {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${proto}//${location.host}/ws`);
+      const log = document.getElementById('log');
+      const error = document.getElementById('error');
+      error.style.display = 'none';
+      error.textContent = '';
+      ws.onopen = () => {
+        document.getElementById('status').textContent = 'Running';
+        ws.send(JSON.stringify({ type: 'run-test' }));
+      };
+      ws.onmessage = (event) => {
+        log.textContent += event.data + '\n';
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'RunError') {
+            error.textContent = `${msg.error}: ${msg.message || ''}`;
+            error.style.display = 'block';
+            document.getElementById('status').textContent = 'error';
+          }
+          if (msg.type === 'RunReport' || msg.type === 'RunError') {
+            document.getElementById('status').textContent = msg.type;
+            loadReport();
+          }
+        } catch (_) {}
+      };
+      ws.onclose = () => document.getElementById('status').textContent = 'Closed';
+    };
+
+    loadReport();
+  </script>
+</body>
+</html>
