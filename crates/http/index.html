@@ -8,12 +8,16 @@
     body { font-family: system-ui, sans-serif; margin: 32px; color: #172033; }
     button { padding: 8px 12px; margin-right: 8px; }
     header { align-items: center; display: flex; gap: 16px; justify-content: space-between; }
+    .title { align-items: baseline; display: flex; gap: 12px; }
     h1 { margin: 0; }
-    #error { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 8px; color: #991b1b; display: none; padding: 8px 12px; }
+    #timer { color: #64748b; font-variant-numeric: tabular-nums; }
+    #summary-window { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; color: #312e81; display: none; padding: 8px 12px; }
+    #summary-window.error { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
     table { border-collapse: collapse; margin-top: 16px; width: 100%; }
     th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
     .test-desc { color: #64748b; font-size: 0.9em; margin-top: 3px; }
     .status { border-radius: 999px; display: inline-block; font-size: 0.8em; font-weight: 700; padding: 3px 8px; }
+    .status-pending { background: #e2e8f0; color: #475569; }
     .status-passed { background: #dcfce7; color: #166534; }
     .status-skip, .status-ignored { background: #fef3c7; color: #92400e; }
     .status-failed { background: #fee2e2; color: #991b1b; }
@@ -22,8 +26,11 @@
 </head>
 <body>
   <header>
-    <h1>pjdfstest</h1>
-    <div id="error"></div>
+    <div class="title">
+      <h1>pjdfstest</h1>
+      <span id="timer"></span>
+    </div>
+    <div id="summary-window"></div>
   </header>
   <button id="run">Run test</button>
   <span id="status">Idle</span>
@@ -33,14 +40,39 @@
   </table>
   <pre id="log"></pre>
   <script>
+    let testRows = [];
+    let timerHandle = null;
+    let startedAt = null;
+
     async function loadReport() {
       const report = await fetch('/report').then(r => r.json());
       renderReport(report);
     }
 
     function renderReport(report) {
-      const rows = (report.results || []).map(([test, result]) => {
-        const status = result.passed || 'Skip';
+      testRows = (report.results || []).map(([test, result]) => ({ test, result }));
+      renderRows();
+    }
+
+    function renderDiscoveredTests(tests) {
+      testRows = (tests || []).map(test => ({ test, result: null }));
+      renderRows();
+    }
+
+    function renderTestResult(test, result) {
+      const key = testKey(test);
+      const existing = testRows.find(row => testKey(row.test) === key);
+      if (existing) {
+        existing.result = result;
+      } else {
+        testRows.push({ test, result });
+      }
+      renderRows();
+    }
+
+    function renderRows() {
+      const rows = testRows.map(({ test, result }) => {
+        const status = result?.passed || 'Pending';
         const statusClass = `status-${status.toLowerCase()}`;
         return `
         <tr>
@@ -50,10 +82,14 @@
             <div class="test-desc">${escapeHtml(test.desc)}</div>
           </td>
           <td><span class="status ${statusClass}">${escapeHtml(status)}</span></td>
-          <td>${escapeHtml(result.error || '')}</td>
+          <td>${escapeHtml(result?.error || '')}</td>
         </tr>
       `}).join('');
       document.getElementById('results').innerHTML = rows || '<tr><td colspan="4">No test results yet</td></tr>';
+    }
+
+    function testKey(test) {
+      return test.path || `${test.group}/${test.name}`;
     }
 
     function escapeHtml(value) {
@@ -74,13 +110,45 @@
       return detail ? `${kind}: ${detail}` : kind;
     }
 
+    function startTimer() {
+      stopTimer(false);
+      startedAt = Date.now();
+      updateTimer();
+      timerHandle = setInterval(updateTimer, 1000);
+    }
+
+    function stopTimer(clear) {
+      if (timerHandle) {
+        clearInterval(timerHandle);
+        timerHandle = null;
+      }
+      if (clear) {
+        startedAt = null;
+        document.getElementById('timer').textContent = '';
+      }
+    }
+
+    function updateTimer() {
+      if (!startedAt) return;
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      document.getElementById('timer').textContent = `${elapsed}s`;
+    }
+
+    function showSummary(text, isError = false) {
+      const summary = document.getElementById('summary-window');
+      summary.textContent = text;
+      summary.className = isError ? 'error' : '';
+      summary.style.display = 'block';
+    }
+
     document.getElementById('run').onclick = () => {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${proto}//${location.host}/ws`);
       const log = document.getElementById('log');
-      const error = document.getElementById('error');
-      error.style.display = 'none';
-      error.textContent = '';
+      const summary = document.getElementById('summary-window');
+      summary.style.display = 'none';
+      summary.textContent = '';
+      stopTimer(true);
       ws.onopen = () => {
         document.getElementById('status').textContent = 'Running';
         ws.send(JSON.stringify({ type: 'run-test' }));
@@ -89,16 +157,20 @@
         log.textContent += event.data + '\n';
         try {
           const msg = JSON.parse(event.data);
-          if (msg.type === 'RunError') {
-            error.textContent = formatRunError(msg.error);
-            error.style.display = 'block';
-            document.getElementById('status').textContent = 'error';
-          }
-          if (msg.type === 'RunReport' || msg.type === 'RunError') {
-            document.getElementById('status').textContent = msg.type;
-            if (msg.type === 'RunReport') {
-              renderReport(msg.report);
-            }
+          document.getElementById('status').textContent = msg.type;
+          if (msg.type === 'RunStarted') {
+            startTimer();
+          } else if (msg.type === 'TestsDiscovered') {
+            renderDiscoveredTests(msg.tests);
+          } else if (msg.type === 'TestResult') {
+            renderTestResult(msg.test, msg.result);
+          } else if (msg.type === 'TestFinished') {
+            stopTimer(false);
+            const report = msg.report;
+            showSummary(`Finished in ${report.duration_ms}ms, success ${report.success_rate.toFixed(1)}%, total ${report.total}`);
+          } else if (msg.type === 'RunError') {
+            stopTimer(false);
+            showSummary(formatRunError(msg.error), true);
           }
         } catch (_) {}
       };
