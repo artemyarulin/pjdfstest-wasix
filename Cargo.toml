@@ -1,3 +1,10 @@
 [workspace]
-members = ["crates/http", "crates/pjdfstest", "crates/reportter", "crates/runner"]
+members = [
+    "crates/client-cli",
+    "crates/client-http",
+    "crates/pjdfstest",
+    "crates/reportter",
+    "crates/runner",
+    "crates/uname",
+]
 resolver = "3"

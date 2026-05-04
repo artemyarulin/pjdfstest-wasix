@@ -14,6 +14,7 @@ pub struct TestReport {
     pub ignored: usize,
     pub skipped: usize,
     pub success_rate: f64,
+    pub results: Vec<(TestCase, TestResult)>,
 }
 
 impl TestReport {
@@ -26,6 +27,7 @@ impl TestReport {
             ignored: 0,
             skipped: 0,
             success_rate: 0.0,
+            results: results.to_vec(),
         };
 
         for (_, result) in results {

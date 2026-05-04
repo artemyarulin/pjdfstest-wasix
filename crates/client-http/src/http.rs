@@ -1,7 +1,6 @@
 use std::{
     io::{self, Read, Write},
     net::{TcpListener, TcpStream},
-    thread,
 };
 
 use crate::{api, wss};
@@ -18,9 +17,7 @@ pub(crate) fn run_server() -> io::Result<()> {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                thread::spawn(move || {
-                    let _ = handle_connection(stream);
-                });
+                let _ = handle_connection(stream);
             }
             Err(err) => eprintln!("accept failed: {err}"),
         }

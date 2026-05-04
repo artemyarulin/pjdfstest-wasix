@@ -3,16 +3,26 @@ name = "artemyarulin/pjdfstest"
 version = "0.1.0"
 description = "pjdfstest runner UI"
 readme = "README.md"
+entrypoint = "http"
 
 [dependencies]
-"wasmer/bash" = "*"
+"wasmer/cli" = "*"
 
 [fs]
 "/app" = "package-assets/app"
+"/wasix" = "package-assets/wasix"
 
 [[module]]
-name = "http"
-source = "target/wasm32-wasmer-wasi/release/http.rustc.wasm"
+name = "client-http"
+source = "target/wasm32-wasmer-wasi/release/client-http.rustc.wasm"
+abi = "wasi"
+
+[module.interfaces]
+wasi = "0.1.0-unstable"
+
+[[module]]
+name = "client-cli"
+source = "target/wasm32-wasmer-wasi/release/client-cli.rustc.wasm"
 abi = "wasi"
 
 [module.interfaces]
@@ -26,7 +36,25 @@ abi = "wasi"
 [module.interfaces]
 wasi = "0.1.0-unstable"
 
+[[module]]
+name = "uname"
+source = "target/wasm32-wasmer-wasi/release/uname.rustc.wasm"
+abi = "wasi"
+
+[module.interfaces]
+wasi = "0.1.0-unstable"
+
 [[command]]
 name = "http"
-module = "http"
+module = "client-http"
+runner = "wasi"
+
+[[command]]
+name = "client-cli"
+module = "client-cli"
+runner = "wasi"
+
+[[command]]
+name = "uname"
+module = "uname"
 runner = "wasi"
