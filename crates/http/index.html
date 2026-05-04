@@ -82,7 +82,7 @@
             <div class="test-desc">${escapeHtml(test.desc)}</div>
           </td>
           <td><span class="status ${statusClass}">${escapeHtml(status)}</span></td>
-          <td>${escapeHtml(result?.error || '')}</td>
+          <td>${escapeHtml(result?.details || '')}</td>
         </tr>
       `}).join('');
       document.getElementById('results').innerHTML = rows || '<tr><td colspan="4">No test results yet</td></tr>';

@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 regex = "1.12.3"
 serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.18"
 
-[dev-dependencies]
+[target.'cfg(not(target_os = "wasi"))'.dev-dependencies]
 insta = "1.47.2"

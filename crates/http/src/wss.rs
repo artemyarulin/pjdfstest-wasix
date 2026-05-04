@@ -28,8 +28,8 @@ pub(crate) fn handle_connection(mut stream: TcpStream, request: &str) -> io::Res
 
     send_text(&mut stream, r#"{"type":"ready","ok":true}"#)?;
     if let Some(command) = read_text(&mut stream)? {
-        for event in api::run_events(&command) {
-            send_text(&mut stream, &event)?;
+        for event in api::run(&command) {
+            send_text(&mut stream, &api::event_json(&event))?;
         }
     }
     send_close(&mut stream)

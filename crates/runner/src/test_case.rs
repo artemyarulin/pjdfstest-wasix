@@ -67,7 +67,7 @@ fn extract_desc(path: &Path, contents: &str) -> Result<String, RunError> {
     Ok(desc)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_os = "wasi")))]
 mod tests {
     use std::path::{Path, PathBuf};
 

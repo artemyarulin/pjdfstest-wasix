@@ -4,6 +4,12 @@ version = "0.1.0"
 description = "pjdfstest runner UI"
 readme = "README.md"
 
+[dependencies]
+"wasmer/bash" = "*"
+
+[fs]
+"/app" = "package-assets/app"
+
 [[module]]
 name = "http"
 source = "target/wasm32-wasmer-wasi/release/http.rustc.wasm"
@@ -24,6 +30,3 @@ wasi = "0.1.0-unstable"
 name = "http"
 module = "http"
 runner = "wasi"
-
-[fs]
-"/app" = "package-assets/app"
