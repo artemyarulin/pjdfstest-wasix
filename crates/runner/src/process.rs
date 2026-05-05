@@ -37,7 +37,7 @@ pub enum ProcessError {
     },
 }
 
-const DEFAULT_TIMEOUT: Duration = Duration::from_millis(150);
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub fn run_bash_script(path: &Path) -> Result<String, ProcessError> {
     run_bash_script_with_timeout(path, DEFAULT_TIMEOUT)

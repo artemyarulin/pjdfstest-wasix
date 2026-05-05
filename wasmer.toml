@@ -6,7 +6,7 @@ readme = "README.md"
 entrypoint = "http"
 
 [dependencies]
-"wasmer/cli" = "*"
+"wasmer/bash" = "*"
 
 [fs]
 "/app" = "package-assets/app"
@@ -49,10 +49,16 @@ name = "http"
 module = "client-http"
 runner = "wasi"
 
+[command.annotations.wasi]
+env = ["PATH=/wasix:/usr/bin:/bin"]
+
 [[command]]
 name = "client-cli"
 module = "client-cli"
 runner = "wasi"
+
+[command.annotations.wasi]
+env = ["PATH=/wasix:/usr/bin:/bin"]
 
 [[command]]
 name = "uname"

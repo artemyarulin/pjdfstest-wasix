@@ -11,8 +11,8 @@ pub(crate) fn report_json() -> String {
     fs::read_to_string("/app/report.json").unwrap_or_else(|_| EMPTY_REPORT.to_string())
 }
 
-pub(crate) fn run(_command: &str, emit: impl FnMut(runner::RunEvent)) {
-    runner::run(emit);
+pub(crate) fn run(_command: &str) -> runner::RunEventReceiver {
+    runner::run()
 }
 
 pub(crate) fn event_json(event: &runner::RunEvent) -> String {

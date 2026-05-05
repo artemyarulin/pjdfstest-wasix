@@ -6,6 +6,8 @@ mod test_result;
 
 use std::{
     path::{Path, PathBuf},
+    sync::mpsc::{self, SendError},
+    thread,
     time::Instant,
 };
 
@@ -41,38 +43,52 @@ impl From<std::io::Error> for RunError {
     }
 }
 
-pub fn run(mut emit: impl FnMut(RunEvent)) {
-    run_in(Path::new("/app/tests"), &mut emit);
+pub type RunEventReceiver = mpsc::Receiver<RunEvent>;
+
+pub fn run() -> RunEventReceiver {
+    run_in(PathBuf::from("/app/tests"))
 }
 
-pub fn run_in(test_dir: &Path, emit: &mut impl FnMut(RunEvent)) {
+pub fn run_in(test_dir: PathBuf) -> RunEventReceiver {
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
+        if let Err(error) = run_to_channel(&test_dir, tx) {
+            eprintln!("failed to send runner event: {error}");
+        }
+    });
+    rx
+}
+
+fn run_to_channel(test_dir: &Path, tx: mpsc::Sender<RunEvent>) -> Result<(), SendError<RunEvent>> {
     let started = Instant::now();
-    emit(RunEvent::RunStarted);
+    tx.send(RunEvent::RunStarted)?;
 
     let cases = match discover(test_dir) {
         Ok(cases) => cases,
         Err(error) => {
-            emit(RunEvent::RunError { error });
-            return;
+            tx.send(RunEvent::RunError { error })?;
+            return Ok(());
         }
     };
-    emit(RunEvent::TestsDiscovered {
+    tx.send(RunEvent::TestsDiscovered {
         tests: cases.clone(),
-    });
+    })?;
 
     let mut results = Vec::new();
     for case in cases {
         let (test, result) = run_test(case);
-        emit(RunEvent::TestResult {
+        tx.send(RunEvent::TestResult {
             test: test.clone(),
             result: result.clone(),
-        });
+        })?;
         results.push((test, result));
     }
 
-    emit(RunEvent::TestFinished {
+    tx.send(RunEvent::TestFinished {
         report: TestReport::new(&results, started.elapsed().as_millis()),
-    });
+    })?;
+
+    Ok(())
 }
 
 fn run_test(case: TestCase) -> (TestCase, TestResult) {

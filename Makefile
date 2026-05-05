@@ -51,8 +51,9 @@ package-build: prepare-webc-assets
 	rm -f /tmp/pjdfstest.webc
 	wasmer package build -o /tmp/pjdfstest.webc
 
-test-cli: prepare-webc-assets
-	wasmer run --entrypoint client-cli .
+test-cli: package-build
+	# HACK: --llvm only needed because of https://github.com/wasmerio/wasmer/issues/6515
+	wasmer run --llvm --volume "$(ROOT):/data" --entrypoint client-cli /tmp/pjdfstest.webc
 
 deploy: prepare-webc-assets
 	wasmer deploy --bump

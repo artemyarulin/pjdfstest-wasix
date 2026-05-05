@@ -8,7 +8,7 @@ use clap::Parser;
 use env_logger::{Builder, Env, Target};
 use runner::RunEvent;
 
-const REPORT_PATH: &str = "/app/report.json";
+const REPORT_PATH: &str = "/data/report.json";
 
 #[derive(Debug, Parser)]
 #[command(about = "Run pjdfstest and print runner events")]
@@ -18,14 +18,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _args = Args::parse();
     init_logger();
 
-    let mut result: Result<(), Box<dyn std::error::Error>> = Ok(());
-    runner::run(|event| {
-        if result.is_err() {
-            return;
-        }
-        result = handle_event(event);
-    });
-    result?;
+    for event in runner::run() {
+        handle_event(event)?;
+    }
 
     Ok(())
 }
